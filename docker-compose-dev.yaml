@@ -5,7 +5,7 @@ services:
     image: server:latest
     entrypoint: python3 /main.py
     volumes:
-      - ./config/config.ini:/config.ini
+      - ./config/server_config.ini:/config.ini
     networks:
       - testing_net
 
@@ -14,7 +14,7 @@ services:
     image: client:latest
     entrypoint: /client
     volumes:
-      - ./config/config.yaml:/config.yaml
+      - ./config/client_config.yaml:/config.yaml
     networks:
       - testing_net
     depends_on:
