@@ -46,6 +46,9 @@ def main():
     server = Server(config_params["port"], config_params["listen_backlog"])
     server.run()
 
+    logging.info(
+        'Bye bye!')
+
 
 def initialize_log(logging_level):
     """
