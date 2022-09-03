@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,6 +24,7 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	done chan bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -28,7 +32,9 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
+		done : make(chan bool, 1),
 	}
+
 	return client
 }
 
@@ -48,22 +54,34 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) gracefullExit() {
+	
+	timeout := time.After(c.config.LoopLapse)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	
+	select {
+		case <-timeout:
+			log.Infof("[CLIENT %v] Timout", c.config.ID)
+		case <- sigs:
+			log.Infof("[CLIENT %v] Signal Interruption", c.config.ID)
+		}
+	c.done <- true
+		
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
 	// Create the connection the server in every loop iteration. Send an
 	// autoincremental msgID to identify every message sent
 	c.createClientSocket()
 	msgID := 1
+	go c.gracefullExit()
+
 
 loop:
 	// Send messages if the loopLapse threshold has been not surpassed
-	for timeout := time.After(c.config.LoopLapse); ; {
-		select {
-		case <-timeout:
-			break loop
-		default:
-		}
-
+	for {
 		// Send
 		fmt.Fprintf(
 			c.conn,
@@ -85,11 +103,18 @@ loop:
 		}
 		log.Infof("[CLIENT %v] Message from server: %v", c.config.ID, msg)
 
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
-
+		
 		// Recreate connection to the server
 		c.conn.Close()
+
+		select {
+			case <- time.After(c.config.LoopPeriod):
+				break
+			case <-c.done:
+				log.Infof("[CLIENT %v] Termino! ", c.config.ID)
+				break loop
+		}
+
 		c.createClientSocket()
 	}
 
