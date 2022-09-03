@@ -1,14 +1,11 @@
-version: '3'
+version: "3"
 services:
   server:
     container_name: server
     image: server:latest
     entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=1
-      - SERVER_PORT=12345
-      - SERVER_LISTEN_BACKLOG=7
-      - LOGGING_LEVEL=DEBUG
+    volumes:
+      - ./config/config.ini:/config.ini
     networks:
       - testing_net
 
@@ -16,11 +13,8 @@ services:
     container_name: client1
     image: client:latest
     entrypoint: /client
-    environment:
-      - CLI_ID=1
-      - CLI_SERVER_ADDRESS=server:12345
-      - CLI_LOOP_LAPSE=1m2s
-      - CLI_LOG_LEVEL=DEBUG
+    volumes:
+      - ./config/config.yaml:/config.yaml
     networks:
       - testing_net
     depends_on:
