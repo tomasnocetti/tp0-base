@@ -20,7 +20,7 @@ var=$(echo "${STRING_TEST}" | \
     docker run -i --rm --network=testing_net netcat-test nc ${SERVICE_NAME} ${PORT})
 
 if [[ "$var" == *"$STRING_TEST"* ]]; then
-  echo "${BIGreen}Congrats! You'r server it's there."
+  echo "${BIGreen}Congrats! Your server it's there."
 else
   echo "${BIReed}Ups! No correct response received. ${var}"
 fi
