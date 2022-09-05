@@ -1,5 +1,15 @@
+#!/bin/bash
+set -e
+
+# Vars 
+REPLICAS="${1:-0}"
+FILE_NAME="${2:-"docker-compose-dev.yaml"}"
+
+BASE='
 version: "3"
-services:
+services:'
+
+SERVER_BASE='
   server:
     container_name: server
     image: server:latest
@@ -10,33 +20,40 @@ services:
       - SERVER_LISTEN_BACKLOG=7
       - LOGGING_LEVEL=DEBUG
     networks:
-      - testing_net
-  client1:
+      - testing_net'
+
+BASE+="${SERVER_BASE}"
+
+for (( i = 1; i <= $REPLICAS; i++ )) 
+do
+  
+  CLIENT_BASE="
+  client${i}:
     image: client:latest
-    container_name: client1
+    container_name: client${i}
     entrypoint: /client
     environment:
-      - CLI_ID=1
-    networks:
-      - testing_net
-    depends_on:
-      - server
-  client2:
-    image: client:latest
-    container_name: client2
-    entrypoint: /client
-    environment:
-      - CLI_ID=2
+      - CLI_ID=${i}
       - CLI_SERVER_ADDRESS=server:12345
       - CLI_LOOP_LAPSE=1m2s
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
     depends_on:
-      - server
+      - server"
+
+  BASE+="${CLIENT_BASE}"
+done
+
+NETWORK_BASE="
 networks:
   testing_net:
     ipam:
       driver: default
       config:
         - subnet: 172.25.125.0/24
+"
+
+BASE+="${NETWORK_BASE}"
+
+echo "${BASE}" > ${FILE_NAME}
