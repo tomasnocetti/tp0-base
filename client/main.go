@@ -3,14 +3,11 @@ package main
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/pkg/errors"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -32,8 +29,10 @@ func InitConfig() (*viper.Viper, error) {
 	// Add env variables supported
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
-	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "lapse")
+	v.BindEnv("contestant", "name")
+	v.BindEnv("contestant", "last_name")
+	v.BindEnv("contestant", "birth")
+	v.BindEnv("contestant", "id")
 	v.BindEnv("log", "level")
 
 	// Try to read configuration from config file. If config file
@@ -43,15 +42,6 @@ func InitConfig() (*viper.Viper, error) {
 	v.SetConfigFile("./config.yaml")
 	if err := v.ReadInConfig(); err != nil {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
-	}
-
-	// Parse time.Duration variables and return an error if those variables cannot be parsed
-	if _, err := time.ParseDuration(v.GetString("loop.lapse")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_LAPSE env var as time.Duration.")
-	}
-
-	if _, err := time.ParseDuration(v.GetString("loop.period")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
 	}
 
 	return v, nil
@@ -67,18 +57,17 @@ func InitLogger(logLevel string) error {
 	}
 
 	logrus.SetLevel(level)
+
 	return nil
 }
 
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	logrus.Infof("Client configuration")
-	logrus.Infof("Client ID: %s", v.GetString("id"))
-	logrus.Infof("Server Address: %s", v.GetString("server.address"))
-	logrus.Infof("Loop Lapse: %v", v.GetDuration("loop.lapse"))
-	logrus.Infof("Loop Period: %v", v.GetDuration("loop.period"))
-	logrus.Infof("Log Level: %s", v.GetString("log.level"))
+	logrus.Infof(`[CLIENT %v] Client configuration: 
+	Server Address: %s
+	Log Level: %s
+	`, v.GetString("id"), v.GetString("server.address"), v.GetString("log.level"))
 }
 
 func main() {
@@ -97,8 +86,12 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		LoopLapse:     v.GetDuration("loop.lapse"),
-		LoopPeriod:    v.GetDuration("loop.period"),
+		Contestant: common.Contestant{
+			Id: v.GetString("contestant.id"),
+			Name: v.GetString("contestant.name"),
+			LastName: v.GetString("contestant.last_name"),
+			Birth: v.GetString("contestant.birth"),
+		},
 	}
 
 	client := common.NewClient(clientConfig)

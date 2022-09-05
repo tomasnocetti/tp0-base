@@ -1,13 +1,11 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
+	"bytes"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,14 +14,13 @@ import (
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopLapse     time.Duration
-	LoopPeriod    time.Duration
+	Contestant Contestant
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	protocol Protocol
 	done chan bool
 }
 
@@ -50,19 +47,17 @@ func (c *Client) createClientSocket() error {
 			err,
 		)
 	}
-	c.conn = conn
+	
+	c.protocol = Protocol{conn, bytes.Buffer{}}
 	return nil
 }
 
 func (c *Client) gracefullExit() {
 	
-	timeout := time.After(c.config.LoopLapse)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	
 	select {
-		case <-timeout:
-			log.Infof("[CLIENT %v] Timout", c.config.ID)
 		case <- sigs:
 			log.Infof("[CLIENT %v] Signal Interruption", c.config.ID)
 		}
@@ -72,52 +67,88 @@ func (c *Client) gracefullExit() {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// Create the connection the server in every loop iteration. Send an
-	// autoincremental msgID to identify every message sent
+	// Establish connection
 	c.createClientSocket()
-	msgID := 1
+	
+	// Wait for interruption
 	go c.gracefullExit()
+	
+	// Process client
+	go c.processLottery()
 
-
-loop:
-	// Send messages if the loopLapse threshold has been not surpassed
-	for {
-		// Send
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v sent\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		msgID++
-
-		if err != nil {
-			log.Errorf(
-				"[CLIENT %v] Error reading from socket. %v.",
-				c.config.ID,
-				err,
-			)
-			c.conn.Close()
-			return
-		}
-		log.Infof("[CLIENT %v] Message from server: %v", c.config.ID, msg)
-
-		
-		// Recreate connection to the server
-		c.conn.Close()
-
-		select {
-			case <- time.After(c.config.LoopPeriod):
-				break
-			case <-c.done:
-				log.Infof("[CLIENT %v] Termino! ", c.config.ID)
-				break loop
-		}
-
-		c.createClientSocket()
-	}
+	// Wait for event to happen
+	<- c.done
 
 	log.Infof("[CLIENT %v] Closing connection", c.config.ID)
-	c.conn.Close()
+	c.protocol.Close()
 }
+
+func (c *Client) processLottery() {
+	
+	err := c.checkContestant()
+	
+	if(err != nil){
+		log.Errorf(
+			"[CLIENT %v] Error writing to socket. %v.",
+			c.config.ID,
+			err,
+		)
+		c.done <- false
+	}
+	
+	err = c.checkResponse()
+	
+	if(err != nil){
+		log.Errorf(
+			"[CLIENT %v] Error reading from socket. %v.",
+			c.config.ID,
+			err,
+		)
+		c.done <- false
+	}
+
+	c.done <- true
+}
+
+func (c *Client) checkContestant() error {
+	con := c.config.Contestant
+	
+	log.Infof(`[CLIENT %v] Checking Contestant:
+	Contestant Id: %v
+	Contestant Name: %v
+	Contestant Last Name: %v
+	Contestant Birth: %v`, 
+		c.config.ID,
+		con.Id,
+		con.Name,
+		con.LastName,
+		con.Birth,
+	)
+	
+	return c.protocol.CheckContestant(&con)
+}
+
+func (c *Client) checkResponse() error {
+	con := c.config.Contestant
+	res, err := c.protocol.CheckResponse()
+	
+	if(err != nil){
+		return err
+	}
+
+	if res {
+		log.Infof(`[CLIENT %v] It's a Winner!:
+		Contestant Id: %v`, 
+		c.config.ID,
+		con.Id,
+		)
+	} else {
+		log.Infof(`[CLIENT %v] Best Luck next time!:
+		Contestant Id: %v`, 
+		c.config.ID,
+		con.Id,
+		)
+	}
+	return nil
+}
+

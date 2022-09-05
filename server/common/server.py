@@ -1,6 +1,10 @@
+from select import select
 import socket
 import logging
 import signal
+
+from common.protocol import OpCode, Protocol
+from common.utils import is_winner
 
 
 class Server:
@@ -27,7 +31,8 @@ class Server:
         while self.running:
             try:
                 client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
+                protocol = Protocol(client_sock)
+                self.__handle_client_connection(protocol)
             except OSError:
                 # When closing socket connection error is thrown, skip handling.
                 pass
@@ -38,7 +43,7 @@ class Server:
             'Closing socket connection')
         self._server_socket.close()
 
-    def __handle_client_connection(self, client_sock):
+    def __handle_client_connection(self, protocol: Protocol):
         """
         Read message from a specific client socket and closes the socket
 
@@ -46,15 +51,21 @@ class Server:
         client socket will also be closed
         """
         try:
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
+            code = protocol.get_next_message_type()
             logging.info(
-                'Message received from connection {}. Msg: {}'
-                .format(client_sock.getpeername(), msg))
-            client_sock.send("Your Message has been received: {}\n".format(msg).encode('utf-8'))
+                f'New client message received from connection: {code}')
+
+            if (code == OpCode.CheckClient):
+
+                contestant = protocol.recv_contestant()
+                winner = is_winner(contestant)
+
+                protocol.send_response(int(winner))
+
         except OSError:
-            logging.info("Error while reading socket {}".format(client_sock))
+            logging.info("Error while reading socket")
         finally:
-            client_sock.close()
+            protocol.close()
 
     def __accept_new_connection(self):
         """
