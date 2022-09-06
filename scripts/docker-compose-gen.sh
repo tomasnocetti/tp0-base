@@ -32,11 +32,12 @@ do
     image: client:latest
     container_name: client${i}
     entrypoint: /client
+    volumes:
+      - ./.data/dataset-${i}.csv:/dataset.csv
     environment:
       - CLI_ID=${i}
       - CLI_SERVER_ADDRESS=server:12345
-      - CLI_LOOP_LAPSE=1m2s
-      - CLI_LOG_LEVEL=DEBUG
+      - CLI_CONTESTANTS=./dataset.csv
     networks:
       - testing_net
     depends_on:
