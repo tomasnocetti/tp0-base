@@ -124,11 +124,12 @@ func (c *Protocol) send(buf []byte) error {
 func (c *Protocol) recv(size int) ([]byte, error) {
 
 	for c.read_buffer.Len() < size {
-		_, err := c.read_buffer.ReadFrom(c.conn)
-		
+		buf := make([]byte, BUFFER)
+		_, err := c.conn.Read(buf)
 		if err != nil {
 			return nil, err
 		}
+		c.read_buffer.Write(buf)
 	}
 
 	return c.read_buffer.Next(size), nil
