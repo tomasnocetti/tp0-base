@@ -70,6 +70,9 @@ class Protocol:
         while(len(self.__buffer) < buf_len):
 
             buffer = self.socket.recv(BUF_SIZE)
+            if (len(buffer) == 0):
+                raise OSError
+
             self.__buffer += buffer
 
         val = self.__buffer[:buf_len]
