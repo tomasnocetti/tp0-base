@@ -54,6 +54,10 @@ func (c *FileReader) getContestants() ([]Contestant, error) {
 
 }
 
+func (c *FileReader) Close() {
+	c.file.Close()
+}
+
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
@@ -126,6 +130,7 @@ func (c *Client) StartClientLoop() {
 
 	log.Infof("[CLIENT %v] Closing connection", c.config.ID)
 	c.protocol.Close()
+	c.reader.Close()
 }
 
 func (c *Client) processLottery() {
