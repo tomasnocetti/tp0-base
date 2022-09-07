@@ -22,10 +22,14 @@ Response Structure for Winners consulting
 
 class OpCode(Enum):
     CheckClient = 1
+    GetStats = 2
 
     def __str__(self):
         if(self.value == 1):
             return "Check Contestant"
+
+        if(self.value == 2):
+            return "Get Stats"
 
 
 class Protocol:

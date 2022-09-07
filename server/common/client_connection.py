@@ -34,35 +34,44 @@ class Client:
                     f'[SERVER - CLIENT {self.addr}] New client message received from connection: {code}')
 
                 if (code == OpCode.CheckClient):
+                    self.check_contestants()
 
-                    logging.debug(
-                        f'[SERVER - CLIENT {self.addr}] Parsing')
-
-                    contestant = self.protocol.recv_contestants()
-
-                    logging.debug(
-                        f'[SERVER - CLIENT {self.addr}] Contestants total: {len(contestant)}')
-
-                    winners = []
-                    for el in contestant:
-                        if not self.running.value:
-                            return
-
-                        if is_winner(el):
-                            winners.append(el)
-
-                    logging.debug(
-                        f'[SERVER - CLIENT {self.addr}] Persisting {len(winners)} winners')
-                    # self.persistance.persist_winners(winners)
-
-                    logging.debug(
-                        f'[SERVER - CLIENT {self.addr}] Responding to client with {len(winners)} winners')
-                    self.protocol.send_response(winners)
+                if (code == OpCode.GetStats):
+                    self.get_stats()
 
         except OSError:
             logging.info("Error while reading socket")
         finally:
             self.finish()
+
+    def check_contestants(self):
+
+        logging.debug(
+            f'[SERVER - CLIENT {self.addr}] Parsing')
+
+        contestant = self.protocol.recv_contestants()
+
+        logging.debug(
+            f'[SERVER - CLIENT {self.addr}] Contestants total: {len(contestant)}')
+
+        winners = []
+        for el in contestant:
+            if not self.running.value:
+                return
+
+            if is_winner(el):
+                winners.append(el)
+
+        logging.debug(
+            f'[SERVER - CLIENT {self.addr}] Persisting {len(winners)} winners')
+        # self.persistance.persist_winners(winners)
+
+        logging.debug(
+            f'[SERVER - CLIENT {self.addr}] Responding to client with {len(winners)} winners')
+        self.protocol.send_response(winners)
+
+    def get_stats():
+        pass
 
     def finish(self):
         if self.running.value:

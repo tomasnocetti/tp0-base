@@ -22,6 +22,7 @@ Base Message structure
 
 const (
 	CheckClient OpCode = 1
+	GetStats OpCode = 2 
 )
 
 /**
