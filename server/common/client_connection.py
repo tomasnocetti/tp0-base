@@ -53,7 +53,7 @@ class Client:
 
                     logging.debug(
                         f'[SERVER - CLIENT {self.addr}] Persisting {len(winners)} winners')
-                    # self.persistance.persist_winners(winners)
+                    self.persistance.persist_winners(winners)
 
                     logging.debug(
                         f'[SERVER - CLIENT {self.addr}] Responding to client with {len(winners)} winners')
