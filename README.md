@@ -39,7 +39,7 @@ Dicho mensaje recibira una respuesta por parte del servidor que tendra la siguie
 
 ```
 | Length in Bytes |     ID info (|)     |
-|    2 byte       |        Dynamic      |
+|    4 byte       |        Dynamic      |
 ```
 
 El largo del payload con los ids de los ganadores separados por el caracter '|'

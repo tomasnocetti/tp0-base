@@ -70,7 +70,7 @@ class Server:
 
                 winners = []
                 for el in contestant:
-                    if True:
+                    if is_winner(el):
                         winners.append(el)
 
                 logging.debug(
