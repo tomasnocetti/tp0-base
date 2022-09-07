@@ -154,6 +154,12 @@ func (c *Client) processLottery() {
 		)
 		c.done <- false
 	}
+	log.Debugf(
+		"[CLIENT %v] From %v contestants, there were %v winners.",
+		c.config.ID,
+		len(cont),
+		len(res),
+	)
 
 	log.Infof(
 		"[CLIENT %v] There is a total of %.2f%% winners!",
