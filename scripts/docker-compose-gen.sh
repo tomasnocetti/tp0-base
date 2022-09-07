@@ -2,8 +2,12 @@
 set -e
 
 # Vars 
-REPLICAS="${1:-0}"
 FILE_NAME="${2:-"docker-compose-dev.yaml"}"
+DATA_PATH='.data'
+
+unzip  -o ${DATA_PATH}/datasets.zip -d ${DATA_PATH}
+
+REPLICAS=$(ls ${DATA_PATH} | grep .csv | wc -l)
 
 BASE='
 version: "3"

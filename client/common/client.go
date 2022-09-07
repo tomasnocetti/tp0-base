@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"encoding/csv"
 	"net"
 	"os"
 	"os/signal"
@@ -14,14 +15,43 @@ import (
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	Contestant Contestant
+	ContestantsPath string
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
 	protocol Protocol
+	reader FileReader
 	done chan bool
+}
+
+// Contestans File Reader
+type FileReader struct {
+	file *os.File
+	reader *csv.Reader
+}
+
+func (c *FileReader) getContestants() ([]Contestant, error) {
+	records, err := c.reader.ReadAll()
+
+	if err != nil {
+		return nil, err
+	}
+	
+	contestants := make([]Contestant, 0)
+
+	// using for loop
+    for _, record := range records {
+        contestants = append(contestants, Contestant{
+			Name: record[0],
+			LastName: record[1],
+			Id: record[2],
+			Birth: record[3],
+		})
+    }
+	return contestants, nil
+
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -52,6 +82,18 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) createFileReader() error {
+	f, err := os.Open(c.config.ContestantsPath)
+    if err != nil {
+        log.Fatal(err)
+    }
+	r := csv.NewReader(f)
+	c.reader = FileReader{f, r}
+
+	return nil
+}
+
+
 func (c *Client) gracefullExit() {
 	
 	sigs := make(chan os.Signal, 1)
@@ -67,6 +109,9 @@ func (c *Client) gracefullExit() {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	// Init file reader
+	c.createFileReader()
+
 	// Establish connection
 	c.createClientSocket()
 	
@@ -85,9 +130,11 @@ func (c *Client) StartClientLoop() {
 
 func (c *Client) processLottery() {
 	
-	err := c.checkContestant()
-	
-	if(err != nil){
+	cont, err := c.reader.getContestants()
+
+	return_err := c.checkContestants(cont)
+
+	if(return_err != nil){
 		log.Errorf(
 			"[CLIENT %v] Error writing to socket. %v.",
 			c.config.ID,
@@ -96,7 +143,8 @@ func (c *Client) processLottery() {
 		c.done <- false
 	}
 	
-	err = c.checkResponse()
+	
+	res, err := c.checkResponse()
 	
 	if(err != nil){
 		log.Errorf(
@@ -107,48 +155,36 @@ func (c *Client) processLottery() {
 		c.done <- false
 	}
 
+	log.Infof(
+		"[CLIENT %v] There is a total of %.2f%% winners!",
+		c.config.ID,
+		float32(len(res)) / float32(len(cont)) * 100,
+	)
+
 	c.done <- true
 }
 
-func (c *Client) checkContestant() error {
-	con := c.config.Contestant
-	
-	log.Infof(`[CLIENT %v] Checking Contestant:
-	Contestant Id: %v
-	Contestant Name: %v
-	Contestant Last Name: %v
-	Contestant Birth: %v`, 
+func (c *Client) checkContestants(con []Contestant) error {
+	log.Infof(
+		"[CLIENT %v] Checking information for a total of %v contestants",
 		c.config.ID,
-		con.Id,
-		con.Name,
-		con.LastName,
-		con.Birth,
+		len(con),
 	)
-	
-	return c.protocol.CheckContestant(&con)
+
+	return c.protocol.CheckContestant(con)
 }
 
-func (c *Client) checkResponse() error {
-	con := c.config.Contestant
+func (c *Client) checkResponse() ([]string, error) {
+	log.Infof(
+		"[CLIENT %v] Waiting for central Response.",
+		c.config.ID,
+	)
+	
 	res, err := c.protocol.CheckResponse()
 	
 	if(err != nil){
-		return err
+		return nil, err
 	}
 
-	if res {
-		log.Infof(`[CLIENT %v] It's a Winner!:
-		Contestant Id: %v`, 
-		c.config.ID,
-		con.Id,
-		)
-	} else {
-		log.Infof(`[CLIENT %v] Best Luck next time!:
-		Contestant Id: %v`, 
-		c.config.ID,
-		con.Id,
-		)
-	}
-	return nil
+	return res, nil
 }
-

@@ -30,9 +30,9 @@ class Server:
         # the server
         while self.running:
             try:
-                client_sock = self.__accept_new_connection()
+                client_sock, addr = self.__accept_new_connection()
                 protocol = Protocol(client_sock)
-                self.__handle_client_connection(protocol)
+                self.__handle_client_connection(protocol, addr)
             except OSError:
                 # When closing socket connection error is thrown, skip handling.
                 pass
@@ -43,7 +43,7 @@ class Server:
             'Closing socket connection')
         self._server_socket.close()
 
-    def __handle_client_connection(self, protocol: Protocol):
+    def __handle_client_connection(self, protocol: Protocol, addr: any):
         """
         Read message from a specific client socket and closes the socket
 
@@ -51,16 +51,31 @@ class Server:
         client socket will also be closed
         """
         try:
+            logging.debug(
+                f'[SERVER - CLIENT {addr}] Waiting Message')
+
             code = protocol.get_next_message_type()
-            logging.info(
-                f'New client message received from connection: {code}')
+            logging.debug(
+                f'[SERVER - CLIENT {addr}] New client message received from connection: {code}')
 
             if (code == OpCode.CheckClient):
 
-                contestant = protocol.recv_contestant()
-                winner = is_winner(contestant)
+                logging.debug(
+                    f'[SERVER - CLIENT {addr}] Parsing')
 
-                protocol.send_response(int(winner))
+                contestant = protocol.recv_contestants()
+
+                logging.debug(
+                    f'[SERVER - CLIENT {addr}] Contestants total: {len(contestant)}')
+
+                winners = []
+                for el in contestant:
+                    if True:
+                        winners.append(el)
+
+                logging.debug(
+                    f'[SERVER - CLIENT {addr}] Responding to client')
+                protocol.send_response(winners)
 
         except OSError:
             logging.info("Error while reading socket")
@@ -79,4 +94,4 @@ class Server:
         logging.info("Proceed to accept new connections")
         c, addr = self._server_socket.accept()
         logging.info('Got connection from {}'.format(addr))
-        return c
+        return c, addr

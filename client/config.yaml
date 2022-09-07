@@ -1,9 +1,4 @@
 server:
   address: "server:12345"
-contestant:
-  name: "Tomas"
-  last_name: "Nocetti"
-  birth: "1996-06-07"
-  id: "39642328"
 log:
-  level: "info"
+  level: "debug"

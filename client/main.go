@@ -29,10 +29,7 @@ func InitConfig() (*viper.Viper, error) {
 	// Add env variables supported
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
-	v.BindEnv("contestant", "name")
-	v.BindEnv("contestant", "last_name")
-	v.BindEnv("contestant", "birth")
-	v.BindEnv("contestant", "id")
+	v.BindEnv("contestant")
 	v.BindEnv("log", "level")
 
 	// Try to read configuration from config file. If config file
@@ -42,6 +39,11 @@ func InitConfig() (*viper.Viper, error) {
 	v.SetConfigFile("./config.yaml")
 	if err := v.ReadInConfig(); err != nil {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
+	}
+
+	// Parse time.Duration variables and return an error if those variables cannot be parsed
+	if val := v.GetString("contestants"); val == "" {
+		log.Fatalf("Contestants path env variable not there")
 	}
 
 	return v, nil
@@ -86,12 +88,7 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		Contestant: common.Contestant{
-			Id: v.GetString("contestant.id"),
-			Name: v.GetString("contestant.name"),
-			LastName: v.GetString("contestant.last_name"),
-			Birth: v.GetString("contestant.birth"),
-		},
+		ContestantsPath: v.GetString("contestants"),
 	}
 
 	client := common.NewClient(clientConfig)

@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 from socket import socket
 from typing import List
 
@@ -7,6 +8,7 @@ from common.utils import Contestant
 BUF_SIZE = 4096
 ENDIAN = 'big'
 SEPARATOR = ';'
+CON_SEPARATOR = '|'
 ENCODING = "utf-8"
 
 """
@@ -31,21 +33,31 @@ class Protocol:
         self.socket = socket
         self.__buffer = bytearray()
 
-    def recv_contestant(self) -> Contestant:
+    def recv_contestants(self) -> Contestant:
         buff_len = self.__recv_message(4)
         value = int.from_bytes(buff_len, ENDIAN)
 
         buff_parsed = self.__recv_message(value).decode(ENCODING)
-        id, first_name, last_name, birth = buff_parsed.split(SEPARATOR)
+        raw_contestants = buff_parsed.split(CON_SEPARATOR)
 
-        val = Contestant(first_name, last_name, id, birth)
+        contestants = []
+        for el in raw_contestants:
+            id, first_name, last_name, birth = el.split(SEPARATOR)
+            val = Contestant(first_name, last_name, id, birth)
 
-        return val
+            contestants.append(val)
 
-    def send_response(self, winners: int):
+        return contestants
 
-        buf_len = winners.to_bytes(2, ENDIAN)
-        self.__send_message(buf_len)
+    def send_response(self, winners: List[Contestant]):
+
+        ids = map(lambda x: x.document, winners)
+        ids_buf = bytes(CON_SEPARATOR.join(ids), ENCODING)
+
+        buf = len(ids_buf).to_bytes(4, ENDIAN)
+        buf += ids_buf
+
+        self.__send_message(buf)
 
     def get_next_message_type(self) -> OpCode:
         opcode = self.__recv_message(1)

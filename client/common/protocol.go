@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"strings"
 )
 
 type OpCode byte
 const BUFFER = 4096
+const SEPARATOR = ';'
+const CON_SEPARATOR = '|'
 
 /**
 Base Message structure
@@ -30,7 +33,7 @@ CheckClient Message Encoded
 **/
 
 type CheckContestantMessage struct{
-	Con Contestant
+	Con []Contestant
 	Op OpCode
 }
 
@@ -48,35 +51,41 @@ type Contestant struct {
 
 // Encode
 func (m *CheckContestantMessage) encode() []byte {
+	con := m.Con
+
+	elem := bytes.Buffer{}
+	for _, record := range con {
+       // Save fields
+		elem.WriteString(record.Id)
+		elem.WriteByte(SEPARATOR)
+		elem.WriteString(record.Name)
+		elem.WriteByte(SEPARATOR)
+		elem.WriteString(record.LastName)
+		elem.WriteByte(SEPARATOR)
+		elem.WriteString(record.Birth)
+		
+		if record != con[len(con)-1] {
+			elem.WriteByte(CON_SEPARATOR)
+		}
+    }
+
 	buf := bytes.Buffer{}
 	
 	// Store Opcode
 	buf.WriteByte(byte(m.Op))
-	
-	con := m.Con
-	
-	// Calculate length and store it
-	length := len(con.Name) + len(con.LastName) + len(con.Birth) + len(con.Id) + 3
+
 	len_buf := make([]byte, 4)
-    binary.BigEndian.PutUint32(len_buf, uint32(length))
+    binary.BigEndian.PutUint32(len_buf, uint32(elem.Len()))
 	buf.Write(len_buf)
-
-	// Save fields
-	buf.WriteString(con.Id)
-	buf.WriteByte(';')
-	buf.WriteString(con.Name)
-	buf.WriteByte(';')
-	buf.WriteString(con.LastName)
-	buf.WriteByte(';')
-	buf.WriteString(con.Birth)
-
+	buf.Write(elem.Bytes())
+	
 	return buf.Bytes()
 }
 
-func (c *Protocol) CheckContestant(contestant *Contestant) error {
+func (c *Protocol) CheckContestant(contestant []Contestant) error {
 	message := CheckContestantMessage{
 		Op: CheckClient,
-		Con: *contestant,
+		Con: contestant,
 	}	
 	buf := message.encode()
 	
@@ -84,20 +93,22 @@ func (c *Protocol) CheckContestant(contestant *Contestant) error {
 }
 
 /* Check response for check contestant message. */
-func (c *Protocol) CheckResponse() (bool, error) {
+func (c *Protocol) CheckResponse() ([]string, error) {
 
 	
-	buf, err := c.recv(2)
+	buf, err := c.recv(4)
 	if err != nil {
-		return false, err	
+		return nil, err	
 	}
     
-	data := binary.BigEndian.Uint16(buf)
-	if data == 1 {
-		return true, nil
-	}
+	length := binary.BigEndian.Uint32(buf)
 	
-	return false, nil
+	buf, err = c.recv(int(length))
+	
+	parsed := string(buf)
+	ids := strings.Split(parsed, string(CON_SEPARATOR))
+	
+	return ids, nil
 }
 
 /* Close socket associated to protocol. */
