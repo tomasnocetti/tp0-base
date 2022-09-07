@@ -136,11 +136,11 @@ func (c *Protocol) recv(size int) ([]byte, error) {
 
 	for c.read_buffer.Len() < size {
 		buf := make([]byte, BUFFER)
-		_, err := c.conn.Read(buf)
+		n, err := c.conn.Read(buf)
 		if err != nil {
 			return nil, err
 		}
-		c.read_buffer.Write(buf)
+		c.read_buffer.Write(buf[:n]) ///IMPORTANTISIMO [:n]!
 	}
 
 	return c.read_buffer.Next(size), nil
