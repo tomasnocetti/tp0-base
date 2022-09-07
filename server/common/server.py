@@ -3,8 +3,9 @@ import socket
 import logging
 import signal
 
-from common.protocol import OpCode, Protocol
-from common.utils import is_winner
+from common.protocol import Protocol
+from common.client_connection import Client
+from common.persistance import Persistance
 
 
 class Server:
@@ -14,6 +15,8 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self.clients = []
+        self.persistance = Persistance()
         signal.signal(signal.SIGTERM, self.__exit_gracefully)
         signal.signal(signal.SIGINT, self.__exit_gracefully)
 
@@ -31,56 +34,30 @@ class Server:
         while self.running:
             try:
                 client_sock, addr = self.__accept_new_connection()
+
+                self.__collect_garbage()
+
                 protocol = Protocol(client_sock)
-                self.__handle_client_connection(protocol, addr)
+                self.clients.append(Client(addr, protocol, self.persistance))
             except OSError:
                 # When closing socket connection error is thrown, skip handling.
                 pass
 
+        for client in self.clients:
+            client.finish()
+
+        self.__collect_garbage()
+
     def __exit_gracefully(self, *args):
         self.running = False
         logging.info(
-            'Closing socket connection')
+            'Closing server socket connection')
         self._server_socket.close()
 
-    def __handle_client_connection(self, protocol: Protocol, addr: any):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
-        try:
-            logging.debug(
-                f'[SERVER - CLIENT {addr}] Waiting Message')
-
-            code = protocol.get_next_message_type()
-            logging.debug(
-                f'[SERVER - CLIENT {addr}] New client message received from connection: {code}')
-
-            if (code == OpCode.CheckClient):
-
-                logging.debug(
-                    f'[SERVER - CLIENT {addr}] Parsing')
-
-                contestant = protocol.recv_contestants()
-
-                logging.debug(
-                    f'[SERVER - CLIENT {addr}] Contestants total: {len(contestant)}')
-
-                winners = []
-                for el in contestant:
-                    if is_winner(el):
-                        winners.append(el)
-
-                logging.debug(
-                    f'[SERVER - CLIENT {addr}] Responding to client')
-                protocol.send_response(winners)
-
-        except OSError:
-            logging.info("Error while reading socket")
-        finally:
-            protocol.close()
+    def __collect_garbage(self):
+        for client in self.clients:
+            if (client.is_closed()):
+                client.join()
 
     def __accept_new_connection(self):
         """
