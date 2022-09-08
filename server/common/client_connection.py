@@ -34,13 +34,15 @@ class Client:
                     f'[SERVER - CLIENT {self.addr}] New client message received from connection: {code}')
 
                 if (code == OpCode.CheckClient):
+                    self.persistance.increment_agencies_pending()
                     self.check_contestants()
+                    self.persistance.decrement_agencies_pending()
 
                 if (code == OpCode.GetStats):
                     self.get_stats()
 
         except OSError:
-            logging.info("Error while reading socket")
+            pass
         finally:
             self.finish()
 
@@ -65,13 +67,22 @@ class Client:
         logging.debug(
             f'[SERVER - CLIENT {self.addr}] Persisting {len(winners)} winners')
         self.persistance.persist_winners(winners)
+        self.persistance.add_winners_to_stats(len(winners))
 
         logging.debug(
             f'[SERVER - CLIENT {self.addr}] Responding to client with {len(winners)} winners')
         self.protocol.send_response(winners)
 
-    def get_stats():
-        pass
+    def get_stats(self):
+
+        if self.persistance.pending_agencies():
+            logging.debug(
+                f'[SERVER - CLIENT {self.addr}] Sending pending Stats!')
+            self.protocol.send_partial_stats(self.persistance.get_partial())
+        else:
+            logging.debug(
+                f'[SERVER - CLIENT {self.addr}] Sending definite Stats!')
+            self.protocol.send_definite_stats(self.persistance.get_partial())
 
     def finish(self):
         if self.running.value:

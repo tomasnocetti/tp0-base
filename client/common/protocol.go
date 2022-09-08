@@ -38,9 +38,18 @@ type CheckContestantMessage struct{
 	Op OpCode
 }
 
+type BaseMessage struct{
+	Op OpCode
+}
+
 type Protocol struct {
 	conn   net.Conn
 	read_buffer bytes.Buffer
+}
+
+type Stats struct {
+	Partial bool
+	Size int
 }
 
 type Contestant struct {
@@ -83,6 +92,16 @@ func (m *CheckContestantMessage) encode() []byte {
 	return buf.Bytes()
 }
 
+func (m *BaseMessage) encode() []byte {
+
+	buf := bytes.Buffer{}
+	
+	// Store Opcode
+	buf.WriteByte(byte(m.Op))
+	
+	return buf.Bytes()
+}
+
 func (c *Protocol) CheckContestant(contestant []Contestant) error {
 	message := CheckContestantMessage{
 		Op: CheckClient,
@@ -92,6 +111,43 @@ func (c *Protocol) CheckContestant(contestant []Contestant) error {
 	
 	return c.send(buf)
 }
+
+func (c *Protocol) GetStats() (Stats, error) {
+	message := BaseMessage{
+		Op: GetStats,	
+	}	
+	
+	buf := message.encode()
+	
+	err := c.send(buf)
+	
+	if err != nil {
+		return Stats{}, err	
+	}	
+	
+	buf, err = c.recv(5)
+	
+	if err != nil {
+		return Stats{}, err	
+	}
+
+	
+	partial_code := buf[0]
+	logrus.Debugf("Debug %v", partial_code)
+	var p bool = false
+
+	if partial_code == '1' {
+		p = true
+	}
+
+	size := binary.BigEndian.Uint32(buf[1:])
+
+	return Stats{
+		Size: int(size),
+		Partial: p,
+	}, err
+}
+
 
 /* Check response for check contestant message. */
 func (c *Protocol) CheckResponse() ([]string, error) {

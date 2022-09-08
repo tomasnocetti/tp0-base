@@ -25,3 +25,9 @@ class Persistance:
 
     def add_winners_to_stats(self, size):
         self.total_winners.value += size
+
+    def pending_agencies(self):
+        return self.total_agencies_pending.value > 0
+
+    def get_partial(self):
+        return self.total_winners.value

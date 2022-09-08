@@ -7,9 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
+
+
+const TIME_LAPSE = 8
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -128,6 +132,8 @@ func (c *Client) StartClientLoop() {
 	// Wait for event to happen
 	<- c.done
 
+	c.getStats()
+
 	log.Infof("[CLIENT %v] Closing connection", c.config.ID)
 	c.protocol.Close()
 	c.reader.Close()
@@ -174,6 +180,43 @@ func (c *Client) processLottery() {
 
 	c.done <- true
 }
+
+func (c *Client) getStats() {
+	keep_asking := true
+	for keep_asking {
+		log.Infof(
+			"[CLIENT %v] Getting Stats!",
+			c.config.ID,
+		)
+	
+		stats, err := c.protocol.GetStats()
+	
+		if(err != nil){
+			log.Errorf(
+				"[CLIENT %v] Error writing to socket. %v.",
+				c.config.ID,
+				err,
+			)
+		}
+		
+		log.Infof(
+			"[CLIENT %v] Got Stats. Partial: %v. Total: %v",
+			c.config.ID,
+			stats.Partial,
+			stats.Size,
+		)
+
+		if (!stats.Partial) {
+			return
+		}
+
+		time.Sleep(TIME_LAPSE * time.Second)
+	}
+	
+	
+}
+
+
 
 func (c *Client) checkContestants(con []Contestant) error {
 	log.Infof(

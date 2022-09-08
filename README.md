@@ -43,3 +43,7 @@ Dicho mensaje recibira una respuesta por parte del servidor que tendra la siguie
 ```
 
 El largo del payload con los ids de los ganadores separados por el caracter '|'
+
+### Problemas Interesantes
+
+* En este punto de los ejercicios se encontro un problema de alocacion de memoria en go, se estaba guardando basura en el buffer que recibia el socket por lo que generaba datos incorrectos. El problema no era deterministico debido a que en cada iteracion cambiaba el output de los datos.

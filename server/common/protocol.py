@@ -63,6 +63,20 @@ class Protocol:
 
         self.__send_message(buf)
 
+    def send_partial_stats(self, winners):
+
+        buf = b'1'
+        buf += winners.to_bytes(4, ENDIAN)
+
+        self.__send_message(buf)
+
+    def send_definite_stats(self, winners):
+
+        buf = b'0'
+        buf += winners.to_bytes(4, ENDIAN)
+
+        self.__send_message(buf)
+
     def get_next_message_type(self) -> OpCode:
         opcode = self.__recv_message(1)
 
