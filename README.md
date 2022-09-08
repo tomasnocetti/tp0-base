@@ -13,3 +13,11 @@ Tercero esta el script que corre el chequeo. Dicho script recibe opcionalmente e
 ```
 sh ./test_server.sh [service {server}] [port {12345}]
 ```
+
+### Notas
+
+- Si se viene de otros ejercicios puede ser necesario correr el comando
+
+```
+docker network rm tp0-base_testing_net
+```
