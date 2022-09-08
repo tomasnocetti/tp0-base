@@ -111,7 +111,7 @@ func (c *Client) gracefullExit() {
 		case <- sigs:
 			log.Infof("[CLIENT %v] Signal Interruption", c.config.ID)
 		}
-	c.done <- true
+	c.done <- false
 		
 }
 
@@ -130,9 +130,15 @@ func (c *Client) StartClientLoop() {
 	go c.processLottery()
 
 	// Wait for event to happen
-	<- c.done
+	ok := <- c.done
 
-	c.getStats()
+	log.Infof("[CLIENT %v] Done: ", c.config.ID, ok)
+
+	if (ok) {
+		go c.getStats()
+		<- c.done
+	}
+
 
 	log.Infof("[CLIENT %v] Closing connection", c.config.ID)
 	c.protocol.Close()
@@ -193,10 +199,12 @@ func (c *Client) getStats() {
 	
 		if(err != nil){
 			log.Errorf(
-				"[CLIENT %v] Error writing to socket. %v.",
+				"[CLIENT %v] Error getting stats from socket. %v.",
 				c.config.ID,
 				err,
 			)
+			c.done <- false
+			return
 		}
 		
 		log.Infof(
@@ -207,9 +215,11 @@ func (c *Client) getStats() {
 		)
 
 		if (!stats.Partial) {
+			c.done <- true
 			return
 		}
 
+		
 		time.Sleep(TIME_LAPSE * time.Second)
 	}
 	

@@ -133,7 +133,7 @@ func (c *Protocol) GetStats() (Stats, error) {
 
 	
 	partial_code := buf[0]
-	logrus.Debugf("Debug %v", partial_code)
+	
 	var p bool = false
 
 	if partial_code == '1' {
