@@ -1,45 +1,9 @@
-### Ejercicio N°6:
+### Ejercicio N°7:
 
-Modificar los clientes para que levanten los datos de los participantes desde los datasets provistos en los archivos de prueba en lugar de las variables de entorno. Cada cliente deberá consultar por todas las personas de un mismo set (los cuales representan a los jugadores de cada agencia) en forma de batch, de manera de poder hacer varias consultas en un solo request. El servidor por otro lado deberá responder con los datos de todos los ganadores del batch, y cada cliente al finalizar las consultas deberá loguear el porcentaje final de jugadores que hayan ganado en su agencia.
+Modificar el servidor actual para que el mismo permita procesar mensajes y aceptar nuevas conexiones en paralelo. Además, deberá comenzar a persistir la información de los ganadores utilizando la función provista `persist_winners(...)`. Considerar los mecanismos de sincronización a utilizar para el correcto funcionamiento de dicha persistencia.
+
+En caso de que el alumno desee implementar un nuevo servidor en Python, deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
 
 ### Resolución
 
-Para este ejercicio se hizo una adaptacion tanto del cliente como del servidor. Para probar la ejecucción basta con correr:
-
-Expande el dataset y configura docker-compose para el uso de multiples clientes.
-
-```
-sh ./scripts/docker-compose-gen.sh
-```
-
-Corre el sistema:
-
-```
-make docker-compose-up && make docker-compose-logs
-```
-
-### Protocolo
-
-Se detalla en terminos generales la interacion definida entre cliente-servidor.
-
-Para el mensaje de chequeo de ganador se define la siguiente estructura:
-
-```
-| Opcode | Length in bytes | Contestants info (ID;FirstName;LastName;Birth)	|
-| 1 byte | 	4 bytes 	   |		Dynamic						|
-```
-
-Constara de:
-
-- OpCode: codigo para la operación de consulta ( en este caso 1)
-- Length: largo del payload en bytes.
-- Info: informacion de todos los participante separada por ';' manteniendo el orden estipulado; participantes separados por '|'.
-
-Dicho mensaje recibira una respuesta por parte del servidor que tendra la siguiente estructura:
-
-```
-| Length in Bytes |     ID info (|)     |
-|    4 byte       |        Dynamic      |
-```
-
-El largo del payload con los ids de los ganadores separados por el caracter '|'
+Se implementa la libreria de multiprocesing en Python para el Servidor.
