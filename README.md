@@ -19,3 +19,11 @@ make docker-compose-down
 ```
 docker stop client1/server
 ```
+
+### Nota
+
+Si se viene del ejercicio 3 puede ser necesario correr
+
+```
+docker network rm testing_net
+```
