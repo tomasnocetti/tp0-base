@@ -1,6 +1,6 @@
 
 import logging
-from multiprocessing import Process, Value
+from multiprocessing import Process, Value, Queue
 
 from common.protocol import OpCode, Protocol
 from common.utils import is_winner
@@ -11,7 +11,7 @@ class Client:
     def __init__(self, addr, protocol: Protocol, persistance: Persistance) -> None:
         self.addr = addr
         self.protocol = protocol
-        self.running = Value('i', 1)
+        self.running = Queue()
         self.persistance = persistance
         self.process = Process(target=self.run)
         self.process.start()
@@ -24,7 +24,7 @@ class Client:
         client socket will also be closed
         """
         try:
-            while(self.running.value):
+            while(self.running.empty()):
                 logging.debug(
                     f'[SERVER - CLIENT {self.addr}] Waiting Message')
 
@@ -45,7 +45,7 @@ class Client:
 
                     winners = []
                     for el in contestant:
-                        if not self.running.value:
+                        if not self.running.empty():
                             return
 
                         if is_winner(el):
@@ -65,14 +65,14 @@ class Client:
             self.finish()
 
     def finish(self):
-        if self.running.value:
+        if self.running.empty():
             logging.debug(f'[SERVER - CLIENT {self.addr}] Closing connection')
             self.protocol.close()
 
-        self.running.value = 0
+        self.running.put(1)
 
     def is_closed(self):
-        return not self.running.value
+        return not self.running.empty()
 
     def join(self):
         logging.debug(f'[SERVER - CLIENT {self.addr}] Joining Process')
