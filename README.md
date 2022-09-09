@@ -23,3 +23,9 @@ Dicho mensaje recibira una respuesta por parte del servidor que tendra la siguie
 |    Partial      |     Winners     |
 |    1 byte       |      4 bytes    |
 ```
+
+### Mecanismos de sincronizacion
+
+Para la parte de sincronizacion de escritura del Archivo se uso un IPC Lock provisto en la libreria de Multiprocessing. Se puede ver su implementacion en server/common/persistance.
+
+Asi mismo para saber cual es la totalidad de clientes activos en la plataforma, la misma entidad Persistance mantiene un contador activo de los clientes que estan `Chequeando Participantes`, se puede ver esto en la linea 37 del archivo `client_connection.py`. Si ese contador no es 0 y un cliente decide solicitar estadisticas, el resultado sera enviado como parcial y el cliente tendra que reintentar luego de 8 segundos.
